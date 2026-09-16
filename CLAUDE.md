@@ -90,6 +90,10 @@ This is not optional and not a style preference. It is the process.
   do not quietly deviate — propose a superseding ADR.
 - **Build the current scope only.** Do not build ahead.
 - **Substitutions need a real reason, not a preference.**
+- **Decisions are justified from this project only.** What you know
+  or remember about the human from elsewhere — other repositories,
+  profile, chat memory — is not a reason. If it seems relevant, offer
+  it as an option and let them choose.
 - **Propose, don't ask, for things you can verify yourself.** Ask when
   it changes what the project is, what it costs, or who it is for.
 - **Honest status (ADR-0002).** Present tense means shipped and

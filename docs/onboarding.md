@@ -32,6 +32,11 @@ into two rounds at most.
 5. **Language and framework.** Offer three or four fitting choices,
    each with one plain-language line on why someone picks it, plus
    "you choose for me" and free text. Recommend one and say why.
+   The reason must come from the answers in this interview (kind of
+   thing, audience, hosting), never from what you know or remember
+   about the human from elsewhere — their other projects, their
+   profile, their preferences in chat. Say "because this is a brochure
+   site," not "because you prefer Go."
    Examples of fitting lists:
    - Website: Astro (fast, simple, mostly plain HTML) · Next.js
      (popular, more moving parts) · Hugo (Go-based, very fast builds)
