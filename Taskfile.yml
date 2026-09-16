@@ -1,0 +1,37 @@
+# Task is the only entrypoint. https://taskfile.dev
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  adr:new:
+    desc: Create the next ADR from the template. Usage - task adr:new -- "Title"
+    cmds:
+      - scripts/adr-new.sh {{.CLI_ARGS}}
+
+  adr:supersede:
+    desc: Point an accepted ADR at its successor. Usage - task adr:supersede -- OLD NEW [partially]
+    cmds:
+      - scripts/adr-supersede.sh {{.CLI_ARGS}}
+
+  adr:index:
+    desc: Regenerate the ADR index in docs/adr/README.md
+    cmds:
+      - scripts/adr-index.sh
+
+  adr:lint:
+    desc: Validate ADR numbering, statuses, sections, and index
+    cmds:
+      - scripts/adr-lint.sh
+
+  lint:
+    desc: All lints. Add project lints here as the stack is decided.
+    cmds:
+      - task: adr:lint
+
+  test:
+    desc: Run the test suite. Replace once the stack is decided (ADR).
+    cmds:
+      - echo "no tests yet — decide the stack in an ADR, then wire this up"
