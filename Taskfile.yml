@@ -16,6 +16,12 @@ tasks:
     cmds:
       - scripts/adr-new.sh {{.CLI_ARGS}}
 
+  adr:accept:
+    desc: Human only - accept or reject a Proposed ADR. Usage - task adr:accept -- NNNN [reject "reason"]
+    interactive: true
+    cmds:
+      - scripts/adr-accept.sh {{.CLI_ARGS}}
+
   adr:supersede:
     desc: Point an accepted ADR at its successor. Usage - task adr:supersede -- OLD NEW [partially]
     cmds:

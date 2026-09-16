@@ -21,10 +21,14 @@ The process is itself ADR-0001. In short:
 1. **Claude proposes.** `task adr:new -- "Title in the imperative"`
    creates the next-numbered file from the template with status
    `Proposed`. Claude never marks an ADR `Accepted`.
-2. **The human accepts.** Only the human moves an ADR to `Accepted`,
-   by editing the status line. Silence is not acceptance.
-3. **Accepted ADRs are immutable.** The file is frozen. A Claude Code
-   hook rejects agent edits to it.
+2. **The human accepts.** `task adr:accept -- NNNN` (or
+   `task adr:accept -- NNNN reject "reason"`). The script refuses to
+   run without an interactive terminal, so the agent's shell cannot
+   call it. Editing the status line by hand is equally fine — the
+   hooks only bind the agent, not you. Silence is not acceptance.
+3. **Accepted ADRs are immutable.** The file is frozen. Claude Code
+   hooks reject agent edits to it, from the Edit/Write tools and from
+   the shell alike.
 4. **Change happens by supersession.** Write a new ADR with
    `Supersedes: ADR-NNNN (fully | partially)`, get it accepted, then
    run `task adr:supersede -- NNNN MMMM`. That script applies the one
@@ -60,6 +64,7 @@ system is. The rest of the body is normal prose.
 | Command | What it does |
 |---|---|
 | `task adr:new -- "Title"` | Create the next ADR from the template. |
+| `task adr:accept -- NNNN [reject "reason"]` | Human only. Move a Proposed ADR to Accepted or Rejected. Needs a terminal. |
 | `task adr:supersede -- OLD NEW` | Add the `Superseded by` pointer to ADR `OLD`. The only permitted edit to an accepted ADR. |
 | `task adr:lint` | Check numbering, statuses, TL;DR presence, supersession pointers, and that the index below is in sync. Runs in CI. |
 | `task adr:index` | Regenerate the index below. |

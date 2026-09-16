@@ -41,8 +41,10 @@ the rules below:
 - Every ADR opens with a caveman **TL;DR**: three to five lines, no
   articles, no hedging. The rest is normal prose.
 - **Claude proposes; only the human accepts.** Claude writes ADRs with
-  `Status: Proposed`. The human moves an ADR to `Accepted` by editing
-  the status line themselves. Silence is not acceptance.
+  `Status: Proposed`. The human moves an ADR to `Accepted` with
+  `task adr:accept -- NNNN`, which refuses to run without an
+  interactive terminal, or by editing the status line themselves.
+  Silence is not acceptance.
 - **Accepted ADRs are immutable.** Not for typos, not for "we learned
   more." The file is frozen.
 - **Change happens by supersession.** A new ADR states
@@ -56,11 +58,13 @@ the rules below:
 - **Ideas are not ADRs.** Things we might build go in `docs/ideas.md`
   with no ceremony. An idea becomes an ADR when we are deciding to do
   it, not when we are considering it.
-- **Enforcement is mechanical.** A Claude Code `PreToolUse` hook
-  (`scripts/hooks/guard-adr.sh`) rejects any Edit or Write by the
-  agent that touches an accepted ADR, or that would set an ADR's
-  status to `Accepted`. `task adr:lint` runs in CI and fails on
-  numbering gaps, missing TL;DR, invalid statuses, dangling
+- **Enforcement is mechanical.** Two Claude Code `PreToolUse` hooks
+  (`scripts/hooks/guard-adr.sh` on Edit/Write,
+  `scripts/hooks/guard-adr-bash.sh` on Bash) reject any agent write
+  that touches an accepted ADR or would set an ADR's status to
+  `Accepted`, whether through the editing tools or the shell. The
+  sanctioned scripts are the only path. `task adr:lint` runs in CI and
+  fails on numbering gaps, missing TL;DR, invalid statuses, dangling
   supersession pointers, and an out-of-date index.
 
 ## Consequences
@@ -74,9 +78,10 @@ the rules below:
 - Typos in accepted ADRs live forever. Read before accepting.
 - Rejected and superseded ADRs are kept. Knowing what was turned down
   is as useful as knowing what was picked.
-- The hook only guards Claude Code's own tools. A human with a text
-  editor can still edit anything; the lint in CI is the backstop for
-  that.
+- The hooks only bind Claude Code. A human with a text editor can
+  still edit anything; the lint in CI and review are the backstop.
+  The Bash guard is pattern-based and can be fooled by a determined
+  agent; it raises the bar, it is not a sandbox.
 
 ## Alternatives considered
 

@@ -35,9 +35,11 @@ Then open Claude Code in the directory and start with:
 
 > Read CLAUDE.md and docs/adr/README.md. Propose an ADR for the stack.
 
-Accept or reject what it proposes by editing the `Status:` line
-yourself. That is the whole trick: the agent cannot accept its own
-decisions, and cannot change accepted ones.
+Accept or reject what it proposes with `task adr:accept -- NNNN` in
+your own terminal (the script refuses to run from the agent's shell).
+That is the whole trick: the agent cannot accept its own decisions,
+and cannot change accepted ones — hooks block the Edit tool and the
+shell alike.
 
 ## What is in here
 
@@ -47,8 +49,8 @@ decisions, and cannot change accepted ones.
 | `docs/adr/` | The decision log. Process in `README.md`, template in `0000-template.md`. |
 | `docs/adr/0001` … `0003` | The process itself, recorded as ADRs. Accept them or supersede them. |
 | `docs/ideas.md` | Scratch list. Not decisions. |
-| `scripts/adr-*.sh` | Create, supersede, index, lint. Wrapped by `task adr:*`. |
-| `scripts/hooks/guard-adr.sh` | Claude Code hook: accepted ADRs are read-only to the agent; only a human accepts. |
+| `scripts/adr-*.sh` | Create, accept (human only), supersede, index, lint. Wrapped by `task adr:*`. |
+| `scripts/hooks/guard-adr*.sh` | Claude Code hooks: accepted ADRs are read-only to the agent, via Edit or shell; only a human accepts. |
 | `.claude/settings.json` | Registers the hook. |
 | `.github/workflows/ci.yml` | Runs the ADR lint on every PR. |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Every PR names its issue and its ADR. |

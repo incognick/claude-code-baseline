@@ -14,8 +14,8 @@ ADR already covers it.
 **The ADR process, in short (ADR-0001):**
 
 - Claude **proposes** ADRs (`task adr:new -- "Title"`). Only the human
-  **accepts** them, by editing the status line. Silence is not
-  acceptance.
+  **accepts** them (`task adr:accept -- NNNN`, which refuses to run
+  from a non-interactive shell). Silence is not acceptance.
 - Accepted ADRs are **immutable**. Change happens by writing a new ADR
   that supersedes the old one, fully or partially. The old file's only
   edit is its `Superseded by` pointer, applied by
@@ -68,11 +68,14 @@ This is not optional and not a style preference. It is the process.
 
 ## Enforcement
 
-- `.claude/settings.json` registers `scripts/hooks/guard-adr.sh` as a
-  `PreToolUse` hook on `Edit|Write|MultiEdit`. It blocks agent edits
-  to any accepted or superseded ADR, and blocks the agent from writing
-  `Status: Accepted` anywhere under `docs/adr/`. If the hook blocks
-  you, it is right; do what its message says.
+- `.claude/settings.json` registers two `PreToolUse` hooks.
+  `scripts/hooks/guard-adr.sh` (on `Edit|Write|MultiEdit`) blocks
+  agent edits to any accepted or superseded ADR and blocks the agent
+  from writing `Status: Accepted` under `docs/adr/`.
+  `scripts/hooks/guard-adr-bash.sh` (on `Bash`) blocks shell writes to
+  `docs/adr/` — `sed -i`, redirects, heredocs, `rm`, `mv` — except
+  through `task adr:*` / `scripts/adr-*.sh`. If a hook blocks you, it
+  is right; do what its message says.
 - `task adr:lint` runs in CI (`.github/workflows/ci.yml`). It fails on
   numbering gaps, invalid statuses, missing sections, dangling
   supersession pointers, and a stale index.
