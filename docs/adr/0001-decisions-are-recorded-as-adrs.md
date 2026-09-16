@@ -39,7 +39,7 @@ Three failure modes shaped the rules below:
 
 - One decision per ADR, in `docs/adr/NNNN-slug.md`, numbered
   sequentially from `0001`, created by the agent with
-  `scripts/adr-new.sh "Title"` from `0000-template.md`.
+  `task adr:new -- "Title"` from `0000-template.md`.
 - Every ADR opens with a **TL;DR**: three to five lines, blunt, no
   hedging. The rest is normal prose.
 - **The agent proposes; only the human accepts.** The agent writes the
@@ -49,15 +49,14 @@ Three failure modes shaped the rules below:
   **Accept**, **Reject**, and **Change something**. The agent never
   infers acceptance from silence, from a vague "ok", or from the human
   asking to proceed with unrelated work.
-- On an explicit **Accept**, the agent runs `scripts/adr-accept.sh
-  NNNN`, which sets the status and records the acceptance date. On
-  **Reject**, `scripts/adr-accept.sh NNNN reject "reason"`. On
+- On an explicit **Accept**, the agent runs `task adr:accept -- NNNN`, which sets the status and records the acceptance date. On
+  **Reject**, `task adr:accept -- NNNN reject "reason"`. On
   **Change**, the agent edits the still-Proposed ADR and asks again.
 - **Accepted ADRs are immutable.** Not for typos, not for "we learned
   more." The file is frozen.
 - **Change happens by supersession.** A new ADR states
   `Supersedes: ADR-NNNN (fully | partially)`. Once it is accepted, the
-  agent runs `scripts/adr-supersede.sh NNNN MMMM`, which applies the
+  agent runs `task adr:supersede -- NNNN MMMM`, which applies the
   one permitted edit to the old file: its `Superseded by` pointer.
 - **ADRs never track status.** No "done", "shipped", "TODO". Work is
   tracked in issues; what is currently built is described in
@@ -66,10 +65,10 @@ Three failure modes shaped the rules below:
   with no ceremony. An idea becomes an ADR when we are deciding to do
   it, not when we are considering it.
 - **Enforcement is mechanical.** Two Claude Code `PreToolUse` hooks
-  (`scripts/hooks/guard-adr.sh` on Edit/Write,
-  `scripts/hooks/guard-adr-bash.sh` on Bash) reject any agent write
+  (`task hook:guard-adr` on Edit/Write,
+  `task hook:guard-adr-bash` on Bash) reject any agent write
   that touches an accepted ADR, or that would set an ADR's status by
-  hand instead of through the scripts. `scripts/adr-lint.sh` runs in
+  hand instead of through the scripts. `task adr:lint` runs in
   CI and fails on numbering gaps, missing TL;DR, invalid statuses,
   dangling supersession pointers, and an out-of-date index.
 

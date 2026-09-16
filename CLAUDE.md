@@ -38,18 +38,17 @@ ADR already covers it.
 
 **The ADR process, in short (ADR-0001):**
 
-- You **propose** ADRs: `scripts/adr-new.sh "Title in the imperative"`.
+- You **propose** ADRs: `task adr:new -- "Title in the imperative"`.
   Write the TL;DR blunt and short; the rest in normal prose.
 - You **present** the ADR to the human in plain language — what is
   being decided, why, what it costs, the alternatives — and ask a
   structured question: **Accept** / **Reject** / **Change something**.
-- Only on an explicit **Accept** do you run `scripts/adr-accept.sh
-  NNNN`. On **Reject**, `scripts/adr-accept.sh NNNN reject "reason"`.
+- Only on an explicit **Accept** do you run `task adr:accept -- NNNN`. On **Reject**, `task adr:accept -- NNNN reject "reason"`.
   On **Change**, edit the still-Proposed ADR and ask again. Silence,
   "ok", or "carry on" is not acceptance.
 - Accepted ADRs are **immutable**. To change one, write a new ADR that
   supersedes it; once that is accepted, run
-  `scripts/adr-supersede.sh OLD NEW [partially]`. That is the only
+  `task adr:supersede -- OLD NEW [partially]`. That is the only
   edit the old file ever gets. Hooks block any other.
 - ADRs never track status. After acceptance, open **issues** for the
   work the ADR implies.
@@ -95,18 +94,19 @@ This is not optional and not a style preference. It is the process.
   it changes what the project is, what it costs, or who it is for.
 - **Honest status (ADR-0002).** Present tense means shipped and
   verified.
-- `task lint` and `task test` are the project entrypoints; wire the
-  stack's tooling into them once the stack ADR is accepted.
+- `task` is the entrypoint for everything, including the ADR tooling.
+  `task --list` shows what exists. Wire the stack's build, test, and
+  lint into `task test` / `task lint` once the stack ADR is accepted.
 
 ## Enforcement
 
 - `.claude/settings.json` registers two `PreToolUse` hooks.
-  `scripts/hooks/guard-adr.sh` (Edit/Write) blocks edits to accepted
+  `task hook:guard-adr` (Edit/Write) blocks edits to accepted
   or superseded ADRs and blocks hand-written status changes.
-  `scripts/hooks/guard-adr-bash.sh` (Bash) blocks shell writes to
-  `docs/adr/` except through `scripts/adr-*.sh`. If a hook blocks you,
+  `task hook:guard-adr-bash` (Bash) blocks shell writes to
+  `docs/adr/` except through the `task adr:*` tasks. If a hook blocks you,
   it is right; do what its message says.
-- `scripts/adr-lint.sh` runs in CI on every PR.
+- `task adr:lint` runs in CI on every PR.
 
 ## Traps
 

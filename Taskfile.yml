@@ -1,19 +1,267 @@
-# Task is the project's entrypoint for build, test, and lint. https://taskfile.dev
-# The agent runs these; the human does not need to. ADR tooling lives in scripts/ and is
-# invoked by the agent directly.
+# Task is the project's single entrypoint. https://taskfile.dev
+# The agent runs these; the human never needs to. Bodies are bash, kept here so the
+# whole process is one readable file. ADR process: docs/adr/README.md (ADR-0001).
+# Bodies are passed to bash as a quoted argument (not via env) so nested `task` calls
+# never inherit a parent's body.
 version: '3'
+
+env:
+  ADR_DIR: docs/adr
 
 tasks:
   default:
+    silent: true
     cmds:
       - task --list
 
   lint:
     desc: All lints. Add project lints here once the stack ADR is accepted.
     cmds:
-      - scripts/adr-lint.sh
+      - task: adr:lint
 
   test:
     desc: Run the test suite. Wire up once the stack ADR is accepted.
     cmds:
       - echo "no tests yet"
+
+  # ---------------------------------------------------------------- ADRs
+
+  adr:new:
+    desc: 'Create the next ADR from the template. Usage: task adr:new -- "Title in the imperative"'
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        title="$*"
+        [ -n "$title" ] || { echo 'usage: task adr:new -- "Title in the imperative"' >&2; exit 1; }
+        last=$(ls "$ADR_DIR" | grep -E '^[0-9]{4}-' | grep -v '^0000-' | sort | tail -n1 | cut -c1-4 || true)
+        next=$(printf '%04d' $((10#${last:-0} + 1)))
+        slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
+        file="$ADR_DIR/$next-$slug.md"
+        sed -e "s/^# ADR-0000: Title in the imperative/# ADR-$next: $title/" \
+            -e "s/YYYY-MM-DD/$(date +%F)/" "$ADR_DIR/0000-template.md" > "$file"
+        task adr:index
+        echo "$file"
+    cmds:
+      - bash -c {{shellQuote .BODY}} -- {{.CLI_ARGS}}
+
+  adr:accept:
+    desc: 'Record the human''s explicit decision. Usage: task adr:accept -- NNNN | task adr:accept -- NNNN reject "reason"'
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        num="${1:-}"; action="${2:-accept}"; reason="${3:-}"
+        [[ "$num" =~ ^[0-9]{4}$ ]] || { echo 'usage: task adr:accept -- NNNN [reject "reason"]' >&2; exit 1; }
+        file=$(ls "$ADR_DIR"/"$num"-*.md 2>/dev/null | head -n1 || true)
+        [ -f "$file" ] || { echo "ADR-$num not found" >&2; exit 1; }
+        status=$(sed -nE 's/^- \*\*Status:\*\* //p' "$file" | head -n1)
+        [ "$status" = "Proposed" ] || { echo "ADR-$num is '$status', not Proposed" >&2; exit 1; }
+        today=$(date +%F)
+        case "$action" in
+          accept) new="Accepted"; line="- **Accepted:** $today, by the human in conversation" ;;
+          reject) [ -n "$reason" ] || { echo "reject needs a one-line reason" >&2; exit 1; }
+                  new="Rejected"; line="- **Rejected:** $today — $reason" ;;
+          *) echo "action must be accept or reject" >&2; exit 1 ;;
+        esac
+        tmp=$(mktemp)
+        awk -v new="$new" -v line="$line" '
+          /^- \*\*Status:\*\* Proposed$/ { print "- **Status:** " new; next }
+          /^- \*\*Date:\*\* /            { print; print line; next }
+          { print }
+        ' "$file" > "$tmp" && mv "$tmp" "$file"
+        task adr:index
+        echo "ADR-$num: $new"
+    cmds:
+      - bash -c {{shellQuote .BODY}} -- {{.CLI_ARGS}}
+
+  adr:supersede:
+    desc: 'Point an accepted ADR at its accepted successor. Usage: task adr:supersede -- OLD NEW [partially]'
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        old="${1:-}"; new="${2:-}"; mode="${3:-fully}"
+        [[ "$old" =~ ^[0-9]{4}$ && "$new" =~ ^[0-9]{4}$ ]] || { echo 'usage: task adr:supersede -- OLD NEW [partially]' >&2; exit 1; }
+        old_file=$(ls "$ADR_DIR"/"$old"-*.md 2>/dev/null | head -n1 || true)
+        new_file=$(ls "$ADR_DIR"/"$new"-*.md 2>/dev/null | head -n1 || true)
+        [ -f "$old_file" ] || { echo "ADR-$old not found" >&2; exit 1; }
+        [ -f "$new_file" ] || { echo "ADR-$new not found" >&2; exit 1; }
+        grep -qE '^- \*\*Status:\*\* Accepted' "$new_file" || { echo "ADR-$new is not Accepted; accept it first" >&2; exit 1; }
+        grep -qE "^- \*\*Supersedes:\*\* .*ADR-$old" "$new_file" || { echo "ADR-$new does not declare 'Supersedes: ADR-$old'" >&2; exit 1; }
+        case "$mode" in
+          fully)     status="Superseded by ADR-$new" ;;
+          partially) status="Partially superseded by ADR-$new" ;;
+          *) echo "mode must be 'fully' or 'partially'" >&2; exit 1 ;;
+        esac
+        tmp=$(mktemp)
+        awk -v status="$status" -v new="$new" '
+          /^- \*\*Status:\*\* /        { print "- **Status:** " status; next }
+          /^- \*\*Superseded by:\*\* / { print "- **Superseded by:** ADR-" new; next }
+          { print }
+        ' "$old_file" > "$tmp" && mv "$tmp" "$old_file"
+        task adr:index
+        echo "ADR-$old: $status"
+    cmds:
+      - bash -c {{shellQuote .BODY}} -- {{.CLI_ARGS}}
+
+  adr:index:
+    desc: Regenerate the index table in docs/adr/README.md
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        readme="$ADR_DIR/README.md"
+        rows=$(mktemp)
+        {
+          echo "| # | Title | Status |"
+          echo "|---|---|---|"
+          for f in $(ls "$ADR_DIR" | grep -E '^[0-9]{4}-' | grep -v '^0000-' | sort); do
+            num=${f:0:4}
+            title=$(sed -nE "1s/^# ADR-$num: //p" "$ADR_DIR/$f")
+            status=$(sed -nE 's/^- \*\*Status:\*\* //p' "$ADR_DIR/$f" | head -n1)
+            echo "| [$num]($f) | $title | $status |"
+          done
+        } > "$rows"
+        start=$(grep -n '<!-- adr-index:start -->' "$readme" | cut -d: -f1)
+        end=$(grep -n '<!-- adr-index:end -->' "$readme" | cut -d: -f1)
+        [ -n "$start" ] && [ -n "$end" ] || { echo "adr:index: markers not found in $readme" >&2; exit 1; }
+        tmp=$(mktemp)
+        { head -n "$start" "$readme"; cat "$rows"; tail -n +"$end" "$readme"; } > "$tmp"
+        mv "$tmp" "$readme"; rm -f "$rows"
+    cmds:
+      - bash -c {{shellQuote .BODY}}
+
+  adr:lint:
+    desc: Validate ADR numbering, statuses, sections, supersession pointers, and the index. Runs in CI.
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        fail=0
+        err() { echo "adr:lint: $*" >&2; fail=1; }
+        expected=1
+        for f in $(ls "$ADR_DIR" | grep -E '^[0-9]{4}-.*\.md$' | grep -v '^0000-' | sort); do
+          num=${f:0:4}; path="$ADR_DIR/$f"
+          [ $((10#$num)) -eq $expected ] || err "$f: expected number $(printf '%04d' $expected) (gap or duplicate)"
+          expected=$((10#$num + 1))
+          head -n1 "$path" | grep -qE "^# ADR-$num: .+" || err "$f: first line must be '# ADR-$num: Title'"
+          status=$(sed -nE 's/^- \*\*Status:\*\* //p' "$path" | head -n1)
+          case "$status" in
+            Proposed|Accepted|Rejected) ;;
+            "Superseded by ADR-"[0-9][0-9][0-9][0-9]|"Partially superseded by ADR-"[0-9][0-9][0-9][0-9]) ;;
+            "") err "$f: missing Status line" ;;
+            *)  err "$f: invalid status '$status'" ;;
+          esac
+          grep -qE '^- \*\*Date:\*\* [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$path" || err "$f: missing or malformed Date"
+          case "$status" in
+            Accepted|"Superseded by"*|"Partially superseded by"*)
+              grep -qE '^- \*\*Accepted:\*\* [0-9]{4}-[0-9]{2}-[0-9]{2}' "$path" || err "$f: status '$status' but no 'Accepted:' line (use task adr:accept)" ;;
+            Rejected)
+              grep -qE '^- \*\*Rejected:\*\* [0-9]{4}-[0-9]{2}-[0-9]{2}' "$path" || err "$f: Rejected without a 'Rejected:' line and reason" ;;
+          esac
+          for sec in 'TL;DR' Context Decision Consequences; do
+            grep -qE "^## $sec" "$path" || err "$f: missing '## $sec' section"
+          done
+          if [[ "$status" =~ ADR-([0-9]{4})$ ]]; then
+            succ=${BASH_REMATCH[1]}
+            succ_file=$(ls "$ADR_DIR"/"$succ"-*.md 2>/dev/null | head -n1 || true)
+            [ -n "$succ_file" ] || err "$f: superseded by ADR-$succ, which does not exist"
+            grep -qE "^- \*\*Superseded by:\*\* ADR-$succ" "$path" || err "$f: Status and 'Superseded by' line disagree"
+            [ -n "$succ_file" ] && { grep -qE "^- \*\*Supersedes:\*\* .*ADR-$num" "$succ_file" || err "$f: ADR-$succ does not declare 'Supersedes: ADR-$num'"; }
+          else
+            grep -qE '^- \*\*Superseded by:\*\* —' "$path" || err "$f: status is '$status' but 'Superseded by' is not '—'"
+          fi
+          tldr=$(awk '/^## TL;DR/{f=1;next} /^## /{f=0} f && NF' "$path" | wc -l | tr -d ' ')
+          [ "$tldr" -le 6 ] || err "$f: TL;DR is $tldr lines; max 6"
+        done
+        before=$(mktemp); cp "$ADR_DIR/README.md" "$before"
+        task adr:index
+        if ! diff -q "$before" "$ADR_DIR/README.md" >/dev/null; then
+          mv "$before" "$ADR_DIR/README.md"
+          err "README.md index is out of date; run task adr:index"
+        else
+          rm -f "$before"
+        fi
+        [ $fail -eq 0 ] && echo "adr:lint: ok"
+        exit $fail
+    cmds:
+      - bash -c {{shellQuote .BODY}}
+
+  # --------------------------------------------------------------- hooks
+  # Registered in .claude/settings.json as Claude Code PreToolUse hooks (invoked with
+  # `task --exit-code` so exit 2 passes through). They read the tool call as JSON on
+  # stdin; exit 2 blocks the call and returns stderr to the agent.
+  # Together they enforce ADR-0001: accepted ADRs are read-only to the agent, and status
+  # changes happen only through the adr:* tasks.
+
+  hook:guard-adr:
+    desc: 'PreToolUse hook (Edit|Write|MultiEdit): accepted ADRs are immutable; no hand-written status changes.'
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        input=$(cat)
+        extract() {
+          if command -v python3 >/dev/null 2>&1; then
+            printf '%s' "$input" | python3 -c '
+        import json,sys
+        t=json.load(sys.stdin).get("tool_input",{})
+        if sys.argv[1]=="file":
+            print(t.get("file_path",""))
+        else:
+            parts=[t.get("content",""), t.get("new_string","")]
+            parts+=[e.get("new_string","") for e in t.get("edits",[])]
+            print("\n".join(parts))' "$1"
+          elif command -v node >/dev/null 2>&1; then
+            printf '%s' "$input" | node -e '
+        let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+        const t=(JSON.parse(s).tool_input)||{};
+        if(process.argv[1]==="file"){console.log(t.file_path||"");}
+        else{const p=[t.content||"",t.new_string||"",...((t.edits||[]).map(e=>e.new_string||""))];console.log(p.join("\n"));}
+        });' "$1"
+          elif command -v jq >/dev/null 2>&1; then
+            if [ "$1" = file ]; then printf '%s' "$input" | jq -r '.tool_input.file_path // ""'
+            else printf '%s' "$input" | jq -r '[.tool_input.content // "", .tool_input.new_string // ""] + [(.tool_input.edits // [])[] | .new_string // ""] | join("\n")'; fi
+          else
+            echo "hook:guard-adr: need python3, node, or jq" >&2; exit 2
+          fi
+        }
+        file=$(extract file)
+        case "$file" in
+          */docs/adr/[0-9][0-9][0-9][0-9]-*.md) ;;
+          *) exit 0 ;;
+        esac
+        if [ -f "$file" ]; then
+          status=$(sed -nE 's/^- \*\*Status:\*\* //p' "$file" | head -n1)
+          case "$status" in
+            Accepted|"Superseded by"*|"Partially superseded by"*)
+              echo "BLOCKED: $(basename "$file") is $status and therefore immutable (ADR-0001). Write a new ADR that supersedes it, get it accepted, then run: task adr:supersede -- OLD NEW" >&2
+              exit 2 ;;
+          esac
+        fi
+        if extract new | grep -qE '^\s*-\s*\*\*Status:\*\*\s*(Accepted|Rejected|Superseded|Partially)'; then
+          echo "BLOCKED: status changes go through the tasks, never by hand (ADR-0001). After the human explicitly chooses Accept or Reject: task adr:accept -- NNNN [reject \"reason\"]. For supersession: task adr:supersede -- OLD NEW" >&2
+          exit 2
+        fi
+    cmds:
+      - bash -c {{shellQuote .BODY}}
+
+  hook:guard-adr-bash:
+    desc: 'PreToolUse hook (Bash): no shell writes to docs/adr except through the adr:* tasks.'
+    silent: true
+    vars:
+      BODY: |
+        set -euo pipefail
+        input=$(cat)
+        cmd=$(printf '%s' "$input" | { python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))' 2>/dev/null \
+          || node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log((JSON.parse(s).tool_input||{}).command||""))' 2>/dev/null \
+          || jq -r '.tool_input.command // ""' 2>/dev/null; } || true)
+        printf '%s' "$cmd" | grep -qE 'docs/adr' || exit 0
+        printf '%s' "$cmd" | grep -qE '(^|[;&|]\s*)task (adr:|lint|test)' && exit 0
+        if printf '%s' "$cmd" | grep -qE '(sed\s+(-[a-zA-Z]*i|--in-place)|perl\s+-[a-zA-Z]*i|>{1,2}\s*[^&]|\btee\b|\bmv\b|\bcp\b|\brm\b|\btruncate\b|python3?\s+-c|node\s+-e|\bawk\b.*>|\bcat\b.*<<)'; then
+          echo "BLOCKED: shell writes to docs/adr are not allowed (ADR-0001). Use task adr:new, task adr:accept (only after the human explicitly chose Accept or Reject), task adr:supersede." >&2
+          exit 2
+        fi
+    cmds:
+      - bash -c {{shellQuote .BODY}}

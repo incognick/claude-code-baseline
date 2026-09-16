@@ -36,11 +36,9 @@ claude
 | `docs/adr/` | The decision log. Process in `README.md`, template in `0000-template.md`. |
 | `docs/adr/0001` … `0004` | The process itself, recorded as decisions. Accept them or supersede them. |
 | `docs/ideas.md` | Scratch list. Not decisions. |
-| `scripts/adr-*.sh` | Create, accept, supersede, index, lint. The agent runs these. |
-| `scripts/hooks/` | Claude Code hooks: accepted decisions are read-only to the agent. |
+| `Taskfile.yml` | Every command the agent runs: create/accept/supersede/lint decisions, the hooks, `task lint`, `task test`. |
 | `.claude/settings.json` | Registers the hooks. |
 | `.github/workflows/ci.yml` | Lints the decision log on every PR. |
-| `Taskfile.yml` | `task lint`, `task test`. The agent wires the stack in. |
 
 ## The rules, in one screen
 

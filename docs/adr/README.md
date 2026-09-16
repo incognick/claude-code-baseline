@@ -24,14 +24,14 @@ The process is itself ADR-0001. In short:
 2. **The agent presents it to the human in plain language** and asks a
    structured question: Accept / Reject / Change something.
 3. **The human decides in conversation.** Only on an explicit Accept
-   does the agent run `scripts/adr-accept.sh NNNN`, which records the
-   date. Reject: `scripts/adr-accept.sh NNNN reject "reason"`. Silence
+   does the agent run `task adr:accept -- NNNN`, which records the
+   date. Reject: `task adr:accept -- NNNN reject "reason"`. Silence
    is not acceptance.
 4. **Accepted ADRs are immutable.** Hooks reject agent edits, from the
    editing tools and from the shell alike.
 5. **Change happens by supersession.** Write a new ADR with
    `Supersedes: ADR-NNNN (fully | partially)`, get it accepted, then
-   `scripts/adr-supersede.sh NNNN MMMM [partially]` applies the one
+   `task adr:supersede -- NNNN MMMM [partially]` applies the one
    permitted edit to the old file.
 6. **After acceptance, the agent opens issues** for the implementation
    work the ADR implies.
@@ -59,15 +59,15 @@ hedging. Someone skimming twenty ADRs reads only the TL;DRs and should
 still come away knowing what this system is. The rest of the body is
 normal prose.
 
-## Tooling (run by the agent)
+## Tooling (run by the agent, defined in `Taskfile.yml`)
 
-| Script | What it does |
+| Task | What it does |
 |---|---|
-| `scripts/adr-new.sh "Title"` | Create the next ADR from the template. |
-| `scripts/adr-accept.sh NNNN [reject "reason"]` | Record the human's explicit decision. Adds the date. |
-| `scripts/adr-supersede.sh OLD NEW [partially]` | Add the `Superseded by` pointer to ADR `OLD`. The only permitted edit to an accepted ADR. |
-| `scripts/adr-lint.sh` | Check numbering, statuses, sections, supersession pointers, and the index. Runs in CI. |
-| `scripts/adr-index.sh` | Regenerate the index below. |
+| `task adr:new -- "Title"` | Create the next ADR from the template. |
+| `task adr:accept -- NNNN [reject "reason"]` | Record the human's explicit decision. Adds the date. |
+| `task adr:supersede -- OLD NEW [partially]` | Add the `Superseded by` pointer to ADR `OLD`. The only permitted edit to an accepted ADR. |
+| `task adr:lint` | Check numbering, statuses, sections, supersession pointers, and the index. Runs in CI. |
+| `task adr:index` | Regenerate the index below. |
 
 ## Index
 

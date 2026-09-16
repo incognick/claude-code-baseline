@@ -70,7 +70,7 @@ saying so in the question.
 
 ## 5. Propose the stack ADR
 
-`scripts/adr-new.sh "Build with <language> and <framework>"`. Write
+`task adr:new -- "Build with <language> and <framework>"`. Write
 it from the answers: context (kind of thing, audience), decision
 (language, framework, package manager, how it is run locally, how
 tests run), consequences, alternatives (the other options offered and
