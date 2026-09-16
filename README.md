@@ -20,7 +20,12 @@ cd my-project
 task --list
 ```
 
-Requires [Task](https://taskfile.dev) and `python3` (for the hook).
+Requires [Task](https://taskfile.dev) and one of `python3`, `node`, or `jq` (the hook parses JSON with whichever exists).
+Scripts are plain bash; on Windows use Git Bash or WSL.
+
+Nothing here assumes a language. TypeScript, Python, Go, Rust — the
+stack is your first ADR, and `task test` / `task lint` are where it
+plugs in.
 
 Then open Claude Code in the directory and start with:
 
