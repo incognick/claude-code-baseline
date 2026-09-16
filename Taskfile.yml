@@ -1,4 +1,6 @@
-# Task is the only entrypoint. https://taskfile.dev
+# Task is the project's entrypoint for build, test, and lint. https://taskfile.dev
+# The agent runs these; the human does not need to. ADR tooling lives in scripts/ and is
+# invoked by the agent directly.
 version: '3'
 
 tasks:
@@ -6,43 +8,12 @@ tasks:
     cmds:
       - task --list
 
-  init:
-    desc: Run once after "Use this template". Strips template-only files. Usage - task init -- [project-name]
-    cmds:
-      - scripts/init.sh {{.CLI_ARGS}}
-
-  adr:new:
-    desc: Create the next ADR from the template. Usage - task adr:new -- "Title"
-    cmds:
-      - scripts/adr-new.sh {{.CLI_ARGS}}
-
-  adr:accept:
-    desc: Human only - accept or reject a Proposed ADR. Usage - task adr:accept -- NNNN [reject "reason"]
-    interactive: true
-    cmds:
-      - scripts/adr-accept.sh {{.CLI_ARGS}}
-
-  adr:supersede:
-    desc: Point an accepted ADR at its successor. Usage - task adr:supersede -- OLD NEW [partially]
-    cmds:
-      - scripts/adr-supersede.sh {{.CLI_ARGS}}
-
-  adr:index:
-    desc: Regenerate the ADR index in docs/adr/README.md
-    cmds:
-      - scripts/adr-index.sh
-
-  adr:lint:
-    desc: Validate ADR numbering, statuses, sections, and index
+  lint:
+    desc: All lints. Add project lints here once the stack ADR is accepted.
     cmds:
       - scripts/adr-lint.sh
 
-  lint:
-    desc: All lints. Add project lints here as the stack is decided.
-    cmds:
-      - task: adr:lint
-
   test:
-    desc: Run the test suite. Replace once the stack is decided (ADR).
+    desc: Run the test suite. Wire up once the stack ADR is accepted.
     cmds:
-      - echo "no tests yet — decide the stack in an ADR, then wire this up"
+      - echo "no tests yet"

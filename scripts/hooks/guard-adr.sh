@@ -3,7 +3,8 @@
 # Enforces ADR-0001 mechanically:
 #   1. An ADR whose status is Accepted (or Superseded) may not be edited by the agent.
 #   2. The agent may never set an ADR's status to Accepted; only the human does.
-# Reads the tool call as JSON on stdin. Exit 2 blocks the call and returns stderr to Claude.
+# Reads the tool call as JSON on stdin.
+# Status changes happen only via scripts/adr-accept.sh and scripts/adr-supersede.sh. Exit 2 blocks the call and returns stderr to Claude.
 # Language-agnostic: parses JSON with whichever of python3, node, or jq is installed.
 set -euo pipefail
 
@@ -52,14 +53,14 @@ if [[ -f "$file" ]]; then
   status=$(sed -nE 's/^- \*\*Status:\*\* //p' "$file" | head -n1)
   case "$status" in
     Accepted|"Superseded by"*|"Partially superseded by"*)
-      echo "BLOCKED: $(basename "$file") is $status and therefore immutable (ADR-0001). Write a new ADR that supersedes it, get it accepted, then run 'task adr:supersede -- OLD NEW'." >&2
+      echo "BLOCKED: $(basename "$file") is $status and therefore immutable (ADR-0001). Write a new ADR that supersedes it, get it accepted, then run scripts/adr-supersede.sh OLD NEW." >&2
       exit 2 ;;
   esac
 fi
 
 new=$(json_extract new)
-if printf '%s' "$new" | grep -qE '^\s*-\s*\*\*Status:\*\*\s*Accepted'; then
-  echo "BLOCKED: only the human accepts an ADR (ADR-0001). Leave the status as Proposed and ask for acceptance." >&2
+if printf '%s' "$new" | grep -qE '^\s*-\s*\*\*Status:\*\*\s*(Accepted|Rejected|Superseded|Partially)'; then
+  echo "BLOCKED: status changes go through the scripts, never by hand (ADR-0001). After the human explicitly chooses Accept or Reject, run scripts/adr-accept.sh NNNN [reject \"reason\"]. For supersession, scripts/adr-supersede.sh OLD NEW." >&2
   exit 2
 fi
 exit 0

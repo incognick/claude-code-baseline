@@ -1,101 +1,125 @@
 # CLAUDE.md — Orientation for Claude Code sessions
 
-This file tells you **what exists and how to work on it**. It
-deliberately does **not** explain *why* anything is the way it is.
-The *why* lives in `docs/adr/`.
+This file tells you **what exists and how to work on it**. It does
+**not** explain *why* anything is the way it is; the *why* lives in
+`docs/adr/`.
+
+## First: is the project initialized?
+
+If `docs/UNINITIALIZED` exists, the project has not been set up.
+Initialization is the only work until it is done. Follow
+`docs/onboarding.md` exactly. Do not skip it because the human asked
+for something else first; tell them the project needs setting up,
+then set it up.
+
+## Who you are working with
+
+The human directing this project may not be a programmer. Assume they
+will not read code, run commands, or interpret errors. They set
+direction and answer questions. See ADR-0003.
+
+- Speak plainly. No jargon without a one-clause explanation. No file
+  paths, stack traces, or code in your replies unless asked.
+- Every decision goes to them as a structured question with options
+  to pick from and room to type their own. Never a decision buried in
+  a paragraph. Batch questions at natural pauses.
+- When they must do something outside this conversation (log in
+  somewhere, pay for a domain, click a button), give exact
+  step-by-step instructions.
+- Report outcomes as they would experience them: a link, a
+  screenshot, "you can now do X." Not "merged PR #12."
 
 ## Where the decisions live
 
-`docs/adr/` is the decision log. Read `docs/adr/README.md` first — it
+`docs/adr/` is the decision log. Read `docs/adr/README.md` first. It
 carries the process and an index with a one-line summary of every
 decision. Before changing anything architectural, check whether an
 ADR already covers it.
 
 **The ADR process, in short (ADR-0001):**
 
-- Claude **proposes** ADRs (`task adr:new -- "Title"`). Only the human
-  **accepts** them (`task adr:accept -- NNNN`, which refuses to run
-  from a non-interactive shell). Silence is not acceptance.
-- Accepted ADRs are **immutable**. Change happens by writing a new ADR
-  that supersedes the old one, fully or partially. The old file's only
-  edit is its `Superseded by` pointer, applied by
-  `task adr:supersede -- OLD NEW`. A hook blocks any other edit.
-- ADRs never track implementation status. Once accepted, Claude opens
-  **issues** for the work the ADR implies.
-- Every ADR opens with a caveman TL;DR. Keep it that way.
+- You **propose** ADRs: `scripts/adr-new.sh "Title in the imperative"`.
+  Write the TL;DR blunt and short; the rest in normal prose.
+- You **present** the ADR to the human in plain language — what is
+  being decided, why, what it costs, the alternatives — and ask a
+  structured question: **Accept** / **Reject** / **Change something**.
+- Only on an explicit **Accept** do you run `scripts/adr-accept.sh
+  NNNN`. On **Reject**, `scripts/adr-accept.sh NNNN reject "reason"`.
+  On **Change**, edit the still-Proposed ADR and ask again. Silence,
+  "ok", or "carry on" is not acceptance.
+- Accepted ADRs are **immutable**. To change one, write a new ADR that
+  supersedes it; once that is accepted, run
+  `scripts/adr-supersede.sh OLD NEW [partially]`. That is the only
+  edit the old file ever gets. Hooks block any other.
+- ADRs never track status. After acceptance, open **issues** for the
+  work the ADR implies.
 - Ideas that are not yet decisions go in `docs/ideas.md`.
 
 ## What this project is
 
-<!-- Fill this in. Two or three sentences: what it is, who it is for,
-where it runs. Delete this comment. -->
+<!-- Filled in during initialization (docs/onboarding.md). -->
 
-_Not yet described. The first accepted ADR should be the stack; the
-second should be the hosting target._
+_Not yet initialized._
 
 ## The working loop (ADR-0003)
 
 This is not optional and not a style preference. It is the process.
 
-1. **An ADR is accepted before any implementation starts.** Not
-   proposed — accepted, explicitly, by the human. If something looks
-   urgent enough to skip that, say so out loud and let the human
-   decide. Do not decide it yourself. Almost nothing is urgent.
-2. **Accepted ADR, then issues, then code.** Issues are the work
-   tracker. ADRs never track status.
-3. **Every code change goes through a subagent.** Every one, however
-   small. The main thread does not write implementation code; it
-   reviews the diff as an independent reader.
-4. **Subagents work in worktrees and open PRs.** The main thread
-   reviews, merges, and resolves conflicts. Max five in parallel.
-5. **No long-lived agents.** Every agent is new.
-6. **Every PR links its issue and its ADR.** The PR template asks.
+1. **An ADR is accepted before implementation starts.** If something
+   looks urgent enough to skip that, say so plainly and let the human
+   decide. Almost nothing is urgent.
+2. **Accepted ADR, then issues, then code.** Issues are the tracker.
+3. **You do not write implementation code.** Not a typo, not a
+   one-line constant. Every code change goes to a fresh subagent on
+   the cheaper model (`Agent` tool, `model: "sonnet"`), briefed with
+   the issue, the relevant ADRs, the conventions, and the definition
+   of done.
+4. **Subagents work in git worktrees and open PRs.** You review each
+   PR as an independent reader: does it do what the issue says,
+   nothing more, in keeping with the ADRs? Request changes or merge.
+   Max five subagents in parallel. Never reuse one.
+5. **After merge, verify the outcome yourself** the way the human
+   would see it — run it, open it, screenshot it. A subagent's "tests
+   pass" is a claim until you have reproduced it. Update "What is
+   built" below in the same change (ADR-0002).
+6. **Report in plain language.** What changed, what they can now see
+   or do, what is next, what needs them.
 
 ## How to work here
 
 - **Follow the ADRs.** If the right move contradicts an accepted ADR,
   do not quietly deviate — propose a superseding ADR.
 - **Build the current scope only.** Do not build ahead.
-- **Substitutions need a real reason, not a preference.** "I have more
-  context now and the original choice doesn't fit" is a reason. "I'd
-  rather use X" is not.
+- **Substitutions need a real reason, not a preference.**
 - **Propose, don't ask, for things you can verify yourself.** Ask when
-  it changes product direction.
+  it changes what the project is, what it costs, or who it is for.
 - **Honest status (ADR-0002).** Present tense means shipped and
-  verified. "What is built" below changes in the same PR as the code.
-- `task` is the entrypoint for everything. `task --list` shows what
-  exists. Add project tasks there, never as loose scripts.
+  verified.
+- `task lint` and `task test` are the project entrypoints; wire the
+  stack's tooling into them once the stack ADR is accepted.
 
 ## Enforcement
 
 - `.claude/settings.json` registers two `PreToolUse` hooks.
-  `scripts/hooks/guard-adr.sh` (on `Edit|Write|MultiEdit`) blocks
-  agent edits to any accepted or superseded ADR and blocks the agent
-  from writing `Status: Accepted` under `docs/adr/`.
-  `scripts/hooks/guard-adr-bash.sh` (on `Bash`) blocks shell writes to
-  `docs/adr/` — `sed -i`, redirects, heredocs, `rm`, `mv` — except
-  through `task adr:*` / `scripts/adr-*.sh`. If a hook blocks you, it
-  is right; do what its message says.
-- `task adr:lint` runs in CI (`.github/workflows/ci.yml`). It fails on
-  numbering gaps, invalid statuses, missing sections, dangling
-  supersession pointers, and a stale index.
+  `scripts/hooks/guard-adr.sh` (Edit/Write) blocks edits to accepted
+  or superseded ADRs and blocks hand-written status changes.
+  `scripts/hooks/guard-adr-bash.sh` (Bash) blocks shell writes to
+  `docs/adr/` except through `scripts/adr-*.sh`. If a hook blocks you,
+  it is right; do what its message says.
+- `scripts/adr-lint.sh` runs in CI on every PR.
 
 ## Traps
 
-<!-- Each entry here should have cost real time before. Add them as
-they happen; delete this comment. -->
+<!-- Each entry should have cost real time. Add them as they happen. -->
 
 - (none yet)
 
 ## What is built
 
-Nothing user-facing. This repository is the baseline: the ADR process,
-its tooling, the hook, and CI for the lint. The stack, the hosting
-target, and the product are all undecided until their ADRs exist and
-are accepted.
+Nothing user-facing. Only the process: ADRs, their tooling, the hooks,
+and CI for the lint. Stack and hosting are undecided until their ADRs
+exist and are accepted.
 
 ## What is next
 
-1. Human accepts or rejects ADR-0001, ADR-0002, ADR-0003.
-2. Claude proposes the stack ADR and the hosting ADR.
-3. Once accepted, Claude opens the first issues.
+Initialization (`docs/onboarding.md`), then the stack ADR.

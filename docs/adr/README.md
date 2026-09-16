@@ -18,22 +18,22 @@ and why.
 
 The process is itself ADR-0001. In short:
 
-1. **Claude proposes.** `task adr:new -- "Title in the imperative"`
-   creates the next-numbered file from the template with status
-   `Proposed`. Claude never marks an ADR `Accepted`.
-2. **The human accepts.** `task adr:accept -- NNNN` (or
-   `task adr:accept -- NNNN reject "reason"`). The script refuses to
-   run without an interactive terminal, so the agent's shell cannot
-   call it. Editing the status line by hand is equally fine — the
-   hooks only bind the agent, not you. Silence is not acceptance.
-3. **Accepted ADRs are immutable.** The file is frozen. Claude Code
-   hooks reject agent edits to it, from the Edit/Write tools and from
-   the shell alike.
-4. **Change happens by supersession.** Write a new ADR with
+1. **The agent proposes.** `scripts/adr-new.sh "Title in the
+   imperative"` creates the next-numbered file from the template with
+   status `Proposed`.
+2. **The agent presents it to the human in plain language** and asks a
+   structured question: Accept / Reject / Change something.
+3. **The human decides in conversation.** Only on an explicit Accept
+   does the agent run `scripts/adr-accept.sh NNNN`, which records the
+   date. Reject: `scripts/adr-accept.sh NNNN reject "reason"`. Silence
+   is not acceptance.
+4. **Accepted ADRs are immutable.** Hooks reject agent edits, from the
+   editing tools and from the shell alike.
+5. **Change happens by supersession.** Write a new ADR with
    `Supersedes: ADR-NNNN (fully | partially)`, get it accepted, then
-   run `task adr:supersede -- NNNN MMMM`. That script applies the one
+   `scripts/adr-supersede.sh NNNN MMMM [partially]` applies the one
    permitted edit to the old file.
-5. **After acceptance, Claude opens issues** for the implementation
+6. **After acceptance, the agent opens issues** for the implementation
    work the ADR implies.
 
 An ADR that is never accepted stays `Proposed`, or is marked
@@ -45,8 +45,8 @@ An ADR that is never accepted stays `Proposed`, or is marked
 
 | Status | Meaning |
 |---|---|
-| `Proposed` | Written by Claude, awaiting the human. Not binding. |
-| `Accepted` | The human approved it. Binding and frozen. |
+| `Proposed` | Written by the agent, awaiting the human. Not binding. |
+| `Accepted` | The human approved it in conversation. Binding and frozen. |
 | `Superseded by ADR-NNNN` | Fully replaced. Read the successor. |
 | `Partially superseded by ADR-NNNN` | Still binding except where the successor overrides. The successor says exactly which part. |
 | `Rejected` | Considered and declined. |
@@ -54,20 +54,20 @@ An ADR that is never accepted stays `Proposed`, or is marked
 ## Format
 
 Every ADR follows `0000-template.md`. The non-negotiable part is the
-**TL;DR** — the first section after the header, written in caveman:
-short, blunt, no articles, no hedging. Someone skimming twenty ADRs
-reads only the TL;DRs and should still come away knowing what this
-system is. The rest of the body is normal prose.
+**TL;DR** — the first section after the header: short, blunt, no
+hedging. Someone skimming twenty ADRs reads only the TL;DRs and should
+still come away knowing what this system is. The rest of the body is
+normal prose.
 
-## Tooling
+## Tooling (run by the agent)
 
-| Command | What it does |
+| Script | What it does |
 |---|---|
-| `task adr:new -- "Title"` | Create the next ADR from the template. |
-| `task adr:accept -- NNNN [reject "reason"]` | Human only. Move a Proposed ADR to Accepted or Rejected. Needs a terminal. |
-| `task adr:supersede -- OLD NEW` | Add the `Superseded by` pointer to ADR `OLD`. The only permitted edit to an accepted ADR. |
-| `task adr:lint` | Check numbering, statuses, TL;DR presence, supersession pointers, and that the index below is in sync. Runs in CI. |
-| `task adr:index` | Regenerate the index below. |
+| `scripts/adr-new.sh "Title"` | Create the next ADR from the template. |
+| `scripts/adr-accept.sh NNNN [reject "reason"]` | Record the human's explicit decision. Adds the date. |
+| `scripts/adr-supersede.sh OLD NEW [partially]` | Add the `Superseded by` pointer to ADR `OLD`. The only permitted edit to an accepted ADR. |
+| `scripts/adr-lint.sh` | Check numbering, statuses, sections, supersession pointers, and the index. Runs in CI. |
+| `scripts/adr-index.sh` | Regenerate the index below. |
 
 ## Index
 
@@ -78,5 +78,6 @@ Read the TL;DR of each. That is the point of the TL;DR.
 |---|---|---|
 | [0001](0001-decisions-are-recorded-as-adrs.md) | Decisions are recorded as ADRs, and accepted ADRs are immutable | Proposed |
 | [0002](0002-honest-status.md) | Honest status — nothing is described as done until it ships | Proposed |
-| [0003](0003-work-flows-through-issues-subagents-and-pull-requests.md) | Work flows through issues, subagents, and pull requests | Proposed |
+| [0003](0003-the-agent-directs-subagents-and-the-human-directs-the-agent.md) | The agent directs subagents; the human directs the agent | Proposed |
+| [0004](0004-the-agent-initializes-the-project-by-interview.md) | The agent initializes the project by interview | Proposed |
 <!-- adr-index:end -->

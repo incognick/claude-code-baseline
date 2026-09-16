@@ -7,10 +7,11 @@
 
 ## TL;DR
 
-Every architectural decision gets one ADR in `docs/adr/`. Claude
-proposes. Human accepts. Accepted ADR never edited — superseded by new
-ADR instead. Old ADR gets one pointer line, nothing else. ADRs record
-decisions, never status. Hook enforces, not goodwill.
+Every architectural decision gets one ADR in `docs/adr/`. Agent
+proposes, explains in plain language, asks. Human accepts in
+conversation. Accepted ADR never edited — superseded by new ADR
+instead. ADRs record decisions, never status. Hooks enforce, not
+goodwill.
 
 ## Context
 
@@ -21,10 +22,11 @@ drift starts: a choice made for a good reason gets quietly reversed
 because the reason was never written down. The next session reverses
 it back. Code churns, nothing improves.
 
-The fix that has worked across several projects is a decision log
-that the agent must read before changing anything architectural, and
-must not be able to edit after the fact. Three failure modes shaped
-the rules below:
+The human directing the project may not be technical and may never
+read the code. The decision log is therefore also the one place they
+can see, in plain language, what was decided on their behalf and why.
+
+Three failure modes shaped the rules below:
 
 1. The agent "cleaned up" an old ADR to match the code it had just
    changed, erasing the record of what had been decided and why.
@@ -36,52 +38,57 @@ the rules below:
 ## Decision
 
 - One decision per ADR, in `docs/adr/NNNN-slug.md`, numbered
-  sequentially from `0001`, created from `0000-template.md` via
-  `task adr:new -- "Title"`.
-- Every ADR opens with a caveman **TL;DR**: three to five lines, no
-  articles, no hedging. The rest is normal prose.
-- **Claude proposes; only the human accepts.** Claude writes ADRs with
-  `Status: Proposed`. The human moves an ADR to `Accepted` with
-  `task adr:accept -- NNNN`, which refuses to run without an
-  interactive terminal, or by editing the status line themselves.
-  Silence is not acceptance.
+  sequentially from `0001`, created by the agent with
+  `scripts/adr-new.sh "Title"` from `0000-template.md`.
+- Every ADR opens with a **TL;DR**: three to five lines, blunt, no
+  hedging. The rest is normal prose.
+- **The agent proposes; only the human accepts.** The agent writes the
+  ADR with `Status: Proposed`, then presents it to the human in plain
+  language — what is being decided, why, what it costs, what the
+  alternatives were — and asks a structured question with the options
+  **Accept**, **Reject**, and **Change something**. The agent never
+  infers acceptance from silence, from a vague "ok", or from the human
+  asking to proceed with unrelated work.
+- On an explicit **Accept**, the agent runs `scripts/adr-accept.sh
+  NNNN`, which sets the status and records the acceptance date. On
+  **Reject**, `scripts/adr-accept.sh NNNN reject "reason"`. On
+  **Change**, the agent edits the still-Proposed ADR and asks again.
 - **Accepted ADRs are immutable.** Not for typos, not for "we learned
   more." The file is frozen.
 - **Change happens by supersession.** A new ADR states
-  `Supersedes: ADR-NNNN (fully | partially)`. The old ADR receives
-  exactly one edit — its `Superseded by:` line — applied by
-  `task adr:supersede -- NNNN MMMM`, never by hand and never by
-  Claude.
+  `Supersedes: ADR-NNNN (fully | partially)`. Once it is accepted, the
+  agent runs `scripts/adr-supersede.sh NNNN MMMM`, which applies the
+  one permitted edit to the old file: its `Superseded by` pointer.
 - **ADRs never track status.** No "done", "shipped", "TODO". Work is
   tracked in issues; what is currently built is described in
-  `CLAUDE.md` and the README.
+  `CLAUDE.md`.
 - **Ideas are not ADRs.** Things we might build go in `docs/ideas.md`
   with no ceremony. An idea becomes an ADR when we are deciding to do
   it, not when we are considering it.
 - **Enforcement is mechanical.** Two Claude Code `PreToolUse` hooks
   (`scripts/hooks/guard-adr.sh` on Edit/Write,
   `scripts/hooks/guard-adr-bash.sh` on Bash) reject any agent write
-  that touches an accepted ADR or would set an ADR's status to
-  `Accepted`, whether through the editing tools or the shell. The
-  sanctioned scripts are the only path. `task adr:lint` runs in CI and
-  fails on numbering gaps, missing TL;DR, invalid statuses, dangling
-  supersession pointers, and an out-of-date index.
+  that touches an accepted ADR, or that would set an ADR's status by
+  hand instead of through the scripts. `scripts/adr-lint.sh` runs in
+  CI and fails on numbering gaps, missing TL;DR, invalid statuses,
+  dangling supersession pointers, and an out-of-date index.
 
 ## Consequences
 
-- Slower start on any architectural change: write the ADR, wait for
-  acceptance, then build. This is the point. The cost has paid for
-  itself every time it was skipped.
+- Slower start on any architectural change: write the ADR, present
+  it, wait for acceptance, then build. This is the point.
 - The human is a hard dependency. Nothing architectural ships while
-  they are away. Acceptable for a solo or small-team project; a larger
-  team would name more than one acceptor in a superseding ADR.
+  they are away. Right for a solo or small project.
+- The acceptance gate is a conversation, so it is only as strong as
+  the agent's discipline in asking. The hooks cannot verify that the
+  human said yes; they can only make the "yes" the sole path and
+  freeze the file afterwards. ADR-0003 makes the asking mandatory.
 - Typos in accepted ADRs live forever. Read before accepting.
 - Rejected and superseded ADRs are kept. Knowing what was turned down
   is as useful as knowing what was picked.
 - The hooks only bind Claude Code. A human with a text editor can
-  still edit anything; the lint in CI and review are the backstop.
-  The Bash guard is pattern-based and can be fooled by a determined
-  agent; it raises the bar, it is not a sandbox.
+  still edit anything; the lint in CI is the backstop for that. The
+  Bash guard is pattern-based; it raises the bar, it is not a sandbox.
 
 ## Alternatives considered
 
@@ -89,8 +96,7 @@ the rules below:
   and the agent edits it freely, so the record is not stable.
 - **Decisions in commit messages.** Not discoverable; the agent does
   not read history before acting.
-- **Editable ADRs with git history as the record.** The agent does not
-  read git history either, and "the ADR says X" must mean X without a
-  `git log` to check.
+- **Human edits the status line themselves.** Works for a technical
+  human; excludes everyone else. The conversation is the interface.
 - **No human gate on acceptance.** Tried by accident. See failure mode
   2.

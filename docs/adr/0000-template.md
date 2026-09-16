@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** YYYY-MM-DD
 - **Supersedes:** — (or ADR-NNNN, fully / partially)
-- **Superseded by:** — (added later by `task adr:supersede`; the *only* edit an accepted ADR ever gets)
+- **Superseded by:** — (added later by `scripts/adr-supersede.sh`; the *only* edit an accepted ADR ever gets)
 
 ## TL;DR
 

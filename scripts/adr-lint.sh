@@ -27,6 +27,12 @@ for f in $files; do
   esac
 
   grep -qE '^- \*\*Date:\*\* [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$path" || err "$f: missing or malformed Date"
+  case "$status" in
+    Accepted|"Superseded by"*|"Partially superseded by"*)
+      grep -qE '^- \*\*Accepted:\*\* [0-9]{4}-[0-9]{2}-[0-9]{2}' "$path" || err "$f: status is '$status' but no 'Accepted:' line (use scripts/adr-accept.sh)" ;;
+    Rejected)
+      grep -qE '^- \*\*Rejected:\*\* [0-9]{4}-[0-9]{2}-[0-9]{2}' "$path" || err "$f: Rejected without a 'Rejected:' line and reason" ;;
+  esac
   grep -qE '^## TL;DR' "$path" || err "$f: missing '## TL;DR' section"
   grep -qE '^## Context' "$path" || err "$f: missing '## Context' section"
   grep -qE '^## Decision' "$path" || err "$f: missing '## Decision' section"
@@ -53,7 +59,7 @@ tmp=$(mktemp); cp "$ADR_DIR/README.md" "$tmp"
 "$(dirname "$0")/adr-index.sh"
 if ! diff -q "$tmp" "$ADR_DIR/README.md" >/dev/null; then
   mv "$tmp" "$ADR_DIR/README.md"
-  err "README.md index is out of date; run 'task adr:index'"
+  err "README.md index is out of date; run scripts/adr-index.sh"
 else
   rm -f "$tmp"
 fi
