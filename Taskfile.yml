@@ -6,6 +6,11 @@ tasks:
     cmds:
       - task --list
 
+  init:
+    desc: Run once after "Use this template". Strips template-only files. Usage - task init -- [project-name]
+    cmds:
+      - scripts/init.sh {{.CLI_ARGS}}
+
   adr:new:
     desc: Create the next ADR from the template. Usage - task adr:new -- "Title"
     cmds:

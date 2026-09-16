@@ -17,8 +17,12 @@ Click **Use this template** on GitHub, or:
 ```sh
 gh repo create my-project --template incognick/claude-code-baseline --clone
 cd my-project
-task --list
+task init -- my-project
 ```
+
+`task init` removes the files that only make sense for the template
+(this README's setup section, `CONTRIBUTING.md`, `LICENSE`, and
+itself) and leaves you a project that reads as yours.
 
 Requires [Task](https://taskfile.dev) and one of `python3`, `node`, or `jq` (the hook parses JSON with whichever exists).
 Scripts are plain bash; on Windows use Git Bash or WSL.
@@ -49,6 +53,7 @@ decisions, and cannot change accepted ones.
 | `.github/workflows/ci.yml` | Runs the ADR lint on every PR. |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Every PR names its issue and its ADR. |
 | `Taskfile.yml` | The only entrypoint. |
+| `scripts/init.sh` | `task init`: strips template-only files. Deletes itself. |
 
 ## The rules, in one screen
 
@@ -64,4 +69,5 @@ process for changing it is already there.
 
 ## License
 
-MIT. Fork it, rename it, keep or drop whatever you like.
+CC0 — public domain. Fork it, rename it, delete the license file, no
+attribution needed.
