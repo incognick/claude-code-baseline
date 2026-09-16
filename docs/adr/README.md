@@ -18,7 +18,7 @@ and why.
 
 The process is itself ADR-0001. In short:
 
-1. **The agent proposes.** `scripts/adr-new.sh "Title in the
+1. **The agent proposes.** `task adr:new -- "Title in the
    imperative"` creates the next-numbered file from the template with
    status `Proposed`.
 2. **The agent presents it to the human in plain language** and asks a
